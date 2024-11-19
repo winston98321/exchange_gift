@@ -10,28 +10,34 @@
             margin: auto; 
             padding: 20px; 
             text-align: center;
-            background-image: url('./data/background.jpg'); /* 添加背景圖片 */
-            background-size: cover; /* 確保圖片覆蓋整個背景 */
-            background-position: center; /* 居中對齊背景圖片 */
-            color: white; /* 設置文字顏色以避免與背景衝突 */
-            text-shadow: 1px 1px 2px black; /* 增加文字陰影讓文字更清晰 */
+            background-image: url('./data/background.jpg'); 
+            background-size: cover;
+            background-position: center;
+            color: white; 
+            text-shadow: 1px 1px 2px black; 
         }
-        .name-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
+        .name-grid, .login-container, .recipient {
+            background-color: rgba(0, 0, 0, 0.7); 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin-top: 20px; 
         }
-        .name-btn {
+        .name-btn, .login-btn {
             padding: 10px;
-            background-color: rgba(76, 175, 80, 0.8); /* 半透明綠色背景 */
+            background-color: rgba(76, 175, 80, 0.8); 
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
+        .input-field {
+            padding: 10px;
+            margin: 10px 0;
+            width: 80%;
+            border: none;
+            border-radius: 5px;
+        }
         .recipient {
-            margin-top: 20px;
             font-size: 20px;
             font-weight: bold;
         }
@@ -40,8 +46,18 @@
 <body>
     <h1>制服趴2024聖誕交換禮物</h1>
 
-    <div id="buttonsContainer" class="name-grid"></div>
-    <div id="recipientArea" class="recipient"></div>
+    <!-- 登入區 -->
+    <div id="loginContainer" class="login-container">
+        <h2>請登入</h2>
+        <input id="username" type="text" placeholder="輸入你的名字" class="input-field">
+        <input id="password" type="password" placeholder="輸入密碼" class="input-field">
+        <button id="loginButton" class="login-btn">登入</button>
+        <div id="loginError" style="color: red; margin-top: 10px;"></div>
+    </div>
+
+    <!-- Secret Santa 區域 -->
+    <div id="buttonsContainer" class="name-grid" style="display: none;"></div>
+    <div id="recipientArea" class="recipient" style="display: none;"></div>
 
     <script>
         class SeededRandom {
@@ -67,47 +83,23 @@
             }
         }
 
-        const FIXED_SEED = 2024; // 固定的 seed
-        const defaultParticipants = [
-            "小明", "小華", "阿強", 
-            "小芳", "小美", "阿龍", 
-            "小英", "小玲", "阿偉"
-        ];
-
-        let participants = defaultParticipants;
+        const FIXED_SEED = 2024; // 固定 seed
+        let participants = [];
         let recipientMap = {};
+        let user = null;
 
-        window.onload = function() {
-            // 嘗試讀取本地 name.csv 文件
-            fetch('./data/name.csv')
-                .then(response => response.text())
-                .then(text => {
-                    const csvParticipants = text.split('\n')
-                        .map(name => name.trim())
-                        .filter(name => name.length > 0);
+        // 登入檢查
+        function login(username, password) {
+            const index = participants.indexOf(username);
+            if (index === -1) {
+                return false; // 帳號不存在
+            }
+            const expectedPassword = `${index + 1}`.repeat(8); // 密碼為行數對應的數字
+            return password === expectedPassword;
+        }
 
-                    // 如果 CSV 有效，則使用 CSV 名單
-                    if (csvParticipants.length > 0) {
-                        participants = csvParticipants;
-                    }
-                    
-                    generateButtons();
-                })
-                .catch(() => {
-                    // 如果 CSV 讀取失敗，使用預設名單
-                    generateButtons();
-                });
-        };
-
-        function generateButtons() {
-            const buttonsContainer = document.getElementById('buttonsContainer');
-            const recipientArea = document.getElementById('recipientArea');
-
-            // 重置
-            buttonsContainer.innerHTML = '';
-            recipientArea.innerHTML = '';
-
-            // 使用固定 seed 隨機洗牌
+        // 生成 Secret Santa 對象
+        function generateRecipientMap() {
             const random = new SeededRandom(FIXED_SEED);
             const shuffled = random.shuffle(participants);
 
@@ -116,22 +108,52 @@
             for (let i = 0; i < shuffled.length; i++) {
                 recipientMap[shuffled[i]] = shuffled[(i + 1) % shuffled.length];
             }
-
-            // 生成按鈕
-            participants.forEach(name => {
-                const btn = document.createElement('button');
-                btn.textContent = name;
-                btn.classList.add('name-btn');
-                btn.onclick = () => showRecipient(name);
-                buttonsContainer.appendChild(btn);
-            });
         }
 
-        function showRecipient(giver) {
+        // 顯示要送禮對象
+        function showRecipient() {
             const recipientArea = document.getElementById('recipientArea');
-            const recipient = recipientMap[giver];
-            recipientArea.textContent = `${giver} 要送禮給 ${recipient}`;
+            const recipient = recipientMap[user];
+            recipientArea.style.display = 'block';
+            recipientArea.textContent = `${user} 要送禮給 ${recipient}`;
         }
+
+        // 登入事件
+        document.getElementById('loginButton').addEventListener('click', () => {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('loginError');
+
+            if (login(username, password)) {
+                user = username;
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('buttonsContainer').style.display = 'none';
+                showRecipient();
+            } else {
+                errorDiv.textContent = '帳號或密碼錯誤！';
+            }
+        });
+
+        // 載入 CSV 名單
+        fetch('./data/name.csv')
+            .then(response => response.text())
+            .then(text => {
+                participants = text.split('\n')
+                    .map(name => name.trim())
+                    .filter(name => name.length > 0);
+
+                if (participants.length > 0) {
+                    generateRecipientMap();
+                }
+            })
+            .catch(() => {
+                participants = [
+                    "小明", "小華", "阿強", 
+                    "小芳", "小美", "阿龍", 
+                    "小英", "小玲", "阿偉"
+                ];
+                generateRecipientMap();
+            });
     </script>
 </body>
 </html>
