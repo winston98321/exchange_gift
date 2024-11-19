@@ -11,25 +11,25 @@
             padding: 20px; 
             text-align: center;
         }
-        .name-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
+        .name-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            margin-top: 20px; 
         }
-        .name-btn {
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .name-btn { 
+            padding: 10px; 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
         }
-        .recipient {
-            margin-top: 20px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
+        .recipient { 
+            margin-top: 20px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            color: #333; 
         }
     </style>
 </head>
@@ -40,55 +40,53 @@
     <div id="recipientArea" class="recipient"></div>
 
     <script>
-        const defaultParticipants = [
+        // 簡單的可重現隨機數生成器（線性同餘法）
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+
+            next() {
+                const a = 1664525;
+                const c = 1013904223;
+                const m = Math.pow(2, 32);
+                this.seed = (a * this.seed + c) % m;
+                return this.seed / m;
+            }
+
+            shuffle(array) {
+                const result = [...array];
+                for (let i = result.length - 1; i > 0; i--) {
+                    const j = Math.floor(this.next() * (i + 1));
+                    [result[i], result[j]] = [result[j], result[i]];
+                }
+                return result;
+            }
+        }
+
+        const participants = [
             "小明", "小華", "阿強", 
             "小芳", "小美", "阿龍", 
             "小英", "小玲", "阿偉"
         ];
 
-        let participants = defaultParticipants;
+        const FIXED_SEED = 12345;
+        const random = new SeededRandom(FIXED_SEED);
+        const shuffledParticipants = random.shuffle(participants);
+
         let recipientMap = {};
 
         window.onload = function() {
-            // 先嘗試讀取本地 name.csv 文件
-            fetch('name.csv')
-                .then(response => response.text())
-                .then(text => {
-                    const csvParticipants = text.split('\n')
-                        .map(name => name.trim())
-                        .filter(name => name.length > 0);
-                    
-                    // 如果 CSV 有效，則使用 CSV 名單
-                    if (csvParticipants.length > 0) {
-                        participants = csvParticipants;
-                    }
-                    
-                    generateButtons();
-                })
-                .catch(() => {
-                    // 如果 CSV 讀取失敗，使用預設名單
-                    generateButtons();
-                });
-        };
-
-        function generateButtons() {
-            const buttonsContainer = document.getElementById('buttonsContainer');
-            const recipientArea = document.getElementById('recipientArea');
-
-            // 重置
-            buttonsContainer.innerHTML = '';
-            recipientArea.innerHTML = '';
-
-            const shuffled = [...participants].sort(() => 0.5 - Math.random());
-            
             // 建立收禮人映射
-            recipientMap = {};
-            for (let i = 0; i < shuffled.length; i++) {
-                recipientMap[shuffled[i]] = shuffled[(i + 1) % shuffled.length];
+            for (let i = 0; i < shuffledParticipants.length; i++) {
+                recipientMap[shuffledParticipants[i]] = 
+                    shuffledParticipants[(i + 1) % shuffledParticipants.length];
             }
 
+            const buttonsContainer = document.getElementById('buttonsContainer');
+            
             // 生成按鈕
-            participants.forEach(name => {
+            shuffledParticipants.forEach(name => {
                 const btn = document.createElement('button');
                 btn.textContent = name;
                 btn.classList.add('name-btn');
