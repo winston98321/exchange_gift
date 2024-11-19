@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Secret Santa CSV 交換禮物</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: auto; 
+            padding: 20px; 
+            text-align: center;
+        }
+        .name-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .name-btn {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .recipient {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secret Santa CSV 交換禮物</h1>
+    
+    <input type="file" id="csvFile" accept=".csv">
+    <button onclick="loadParticipants()">載入名單</button>
+
+    <div id="buttonsContainer" class="name-grid"></div>
+    <div id="recipientArea" class="recipient"></div>
+
+    <script>
+        let participants = [];
+        let recipientMap = {};
+
+        function loadParticipants() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const text = e.target.result;
+                participants = text.split('\n')
+                    .map(name => name.trim())
+                    .filter(name => name.length > 0);
+
+                generateButtons();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function generateButtons() {
+            const buttonsContainer = document.getElementById('buttonsContainer');
+            const recipientArea = document.getElementById('recipientArea');
+
+            // 重置
+            buttonsContainer.innerHTML = '';
+            recipientArea.innerHTML = '';
+
+            const shuffled = [...participants].sort(() => 0.5 - Math.random());
+            
+            // 建立收禮人映射
+            recipientMap = {};
+            for (let i = 0; i < shuffled.length; i++) {
+                recipientMap[shuffled[i]] = shuffled[(i + 1) % shuffled.length];
+            }
+
+            // 生成按鈕
+            participants.forEach(name => {
+                const btn = document.createElement('button');
+                btn.textContent = name;
+                btn.classList.add('name-btn');
+                btn.onclick = () => showRecipient(name);
+                buttonsContainer.appendChild(btn);
+            });
+        }
+
+        function showRecipient(giver) {
+            const recipientArea = document.getElementById('recipientArea');
+            const recipient = recipientMap[giver];
+            recipientArea.textContent = `${giver} 要送禮給 ${recipient}`;
+        }
+    </script>
+</body>
+</html>
