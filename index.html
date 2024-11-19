@@ -11,25 +11,25 @@
             padding: 20px; 
             text-align: center;
         }
-        .name-grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 10px; 
-            margin-top: 20px; 
+        .name-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
         }
-        .name-btn { 
-            padding: 10px; 
-            background-color: #4CAF50; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
+        .name-btn {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
-        .recipient { 
-            margin-top: 20px; 
-            font-size: 20px; 
-            font-weight: bold; 
-            color: #333; 
+        .recipient {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
         }
     </style>
 </head>
@@ -40,7 +40,6 @@
     <div id="recipientArea" class="recipient"></div>
 
     <script>
-        // 簡單的可重現隨機數生成器（線性同餘法）
         class SeededRandom {
             constructor(seed) {
                 this.seed = seed;
@@ -64,16 +63,14 @@
             }
         }
 
-        let participants = [
+        const FIXED_SEED = 12345; // 固定的 seed
+        const defaultParticipants = [
             "小明", "小華", "阿強", 
             "小芳", "小美", "阿龍", 
             "小英", "小玲", "阿偉"
         ];
 
-        const FIXED_SEED = 12345;
-        const random = new SeededRandom(FIXED_SEED);
-        const shuffledParticipants = random.shuffle(participants);
-
+        let participants = defaultParticipants;
         let recipientMap = {};
 
         window.onload = function() {
@@ -102,18 +99,22 @@
             const buttonsContainer = document.getElementById('buttonsContainer');
             const recipientArea = document.getElementById('recipientArea');
 
-            // 重置內容
+            // 重置
             buttonsContainer.innerHTML = '';
             recipientArea.innerHTML = '';
 
+            // 使用固定 seed 隨機洗牌
+            const random = new SeededRandom(FIXED_SEED);
+            const shuffled = random.shuffle(participants);
+
             // 建立收禮人映射
-            for (let i = 0; i < shuffledParticipants.length; i++) {
-                recipientMap[shuffledParticipants[i]] = 
-                    shuffledParticipants[(i + 1) % shuffledParticipants.length];
+            recipientMap = {};
+            for (let i = 0; i < shuffled.length; i++) {
+                recipientMap[shuffled[i]] = shuffled[(i + 1) % shuffled.length];
             }
 
             // 生成按鈕
-            shuffledParticipants.forEach(name => {
+            participants.forEach(name => {
                 const btn = document.createElement('button');
                 btn.textContent = name;
                 btn.classList.add('name-btn');
