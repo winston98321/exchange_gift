@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Secret Santa CSV 交換禮物</title>
+    <title>Secret Santa 交換禮物</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -34,33 +34,42 @@
     </style>
 </head>
 <body>
-    <h1>Secret Santa CSV 交換禮物</h1>
-    
-    <input type="file" id="csvFile" accept=".csv">
-    <button onclick="loadParticipants()">載入名單</button>
+    <h1>Secret Santa 交換禮物</h1>
 
     <div id="buttonsContainer" class="name-grid"></div>
     <div id="recipientArea" class="recipient"></div>
 
     <script>
-        let participants = [];
+        const defaultParticipants = [
+            "小明", "小華", "阿強", 
+            "小芳", "小美", "阿龍", 
+            "小英", "小玲", "阿偉"
+        ];
+
+        let participants = defaultParticipants;
         let recipientMap = {};
 
-        function loadParticipants() {
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-
-            reader.onload = function(e) {
-                const text = e.target.result;
-                participants = text.split('\n')
-                    .map(name => name.trim())
-                    .filter(name => name.length > 0);
-
-                generateButtons();
-            };
-            reader.readAsText(file, 'UTF-8');
-        }
+        window.onload = function() {
+            // 先嘗試讀取本地 name.csv 文件
+            fetch('name.csv')
+                .then(response => response.text())
+                .then(text => {
+                    const csvParticipants = text.split('\n')
+                        .map(name => name.trim())
+                        .filter(name => name.length > 0);
+                    
+                    // 如果 CSV 有效，則使用 CSV 名單
+                    if (csvParticipants.length > 0) {
+                        participants = csvParticipants;
+                    }
+                    
+                    generateButtons();
+                })
+                .catch(() => {
+                    // 如果 CSV 讀取失敗，使用預設名單
+                    generateButtons();
+                });
+        };
 
         function generateButtons() {
             const buttonsContainer = document.getElementById('buttonsContainer');
