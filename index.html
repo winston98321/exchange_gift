@@ -10,7 +10,7 @@
             margin: auto; 
             padding: 20px; 
             text-align: center;
-            background-image: url('background.jpg'); /* 添加背景圖片 */
+            background-image: url('./data/background.jpg'); /* 添加背景圖片 */
             background-size: cover; /* 確保圖片覆蓋整個背景 */
             background-position: center; /* 居中對齊背景圖片 */
             color: white; /* 設置文字顏色以避免與背景衝突 */
@@ -79,7 +79,7 @@
 
         window.onload = function() {
             // 嘗試讀取本地 name.csv 文件
-            fetch('name.csv')
+            fetch('./data/name.csv')
                 .then(response => response.text())
                 .then(text => {
                     const csvParticipants = text.split('\n')
