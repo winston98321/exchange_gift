@@ -64,7 +64,7 @@
             }
         }
 
-        const participants = [
+        let participants = [
             "小明", "小華", "阿強", 
             "小芳", "小美", "阿龍", 
             "小英", "小玲", "阿偉"
@@ -77,14 +77,41 @@
         let recipientMap = {};
 
         window.onload = function() {
+            // 嘗試讀取本地 name.csv 文件
+            fetch('name.csv')
+                .then(response => response.text())
+                .then(text => {
+                    const csvParticipants = text.split('\n')
+                        .map(name => name.trim())
+                        .filter(name => name.length > 0);
+
+                    // 如果 CSV 有效，則使用 CSV 名單
+                    if (csvParticipants.length > 0) {
+                        participants = csvParticipants;
+                    }
+                    
+                    generateButtons();
+                })
+                .catch(() => {
+                    // 如果 CSV 讀取失敗，使用預設名單
+                    generateButtons();
+                });
+        };
+
+        function generateButtons() {
+            const buttonsContainer = document.getElementById('buttonsContainer');
+            const recipientArea = document.getElementById('recipientArea');
+
+            // 重置內容
+            buttonsContainer.innerHTML = '';
+            recipientArea.innerHTML = '';
+
             // 建立收禮人映射
             for (let i = 0; i < shuffledParticipants.length; i++) {
                 recipientMap[shuffledParticipants[i]] = 
                     shuffledParticipants[(i + 1) % shuffledParticipants.length];
             }
 
-            const buttonsContainer = document.getElementById('buttonsContainer');
-            
             // 生成按鈕
             shuffledParticipants.forEach(name => {
                 const btn = document.createElement('button');
