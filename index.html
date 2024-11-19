@@ -88,13 +88,20 @@
         let recipientMap = {};
         let user = null;
 
+        // 將名字轉為 UTF-8 的 16 進制密碼
+        function nameToPassword(name) {
+            return Array.from(new TextEncoder().encode(name))
+                .map(byte => byte.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
         // 登入檢查
         function login(username, password) {
             const index = participants.indexOf(username);
             if (index === -1) {
                 return false; // 帳號不存在
             }
-            const expectedPassword = `${index + 1}`.repeat(8); // 密碼為行數對應的數字
+            const expectedPassword = nameToPassword(username); // 基於名字生成密碼
             return password === expectedPassword;
         }
 
