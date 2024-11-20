@@ -46,126 +46,155 @@
 <body>
     <h1>制服趴2024聖誕交換禮物</h1>
 
-    <!-- 登入區 -->
     <div id="loginContainer" class="login-container">
         <h2>請登入</h2>
-        <input id="username" type="text" placeholder="輸入你的名字" class="input-field">
-        <input id="password" type="password" placeholder="輸入密碼" class="input-field">
+        <input id="username" type="text" placeholder="輸入你的名字" class="input-field" required>
+        <input id="password" type="password" placeholder="輸入密碼" class="input-field" required>
         <button id="loginButton" class="login-btn">登入</button>
         <div id="loginError" style="color: red; margin-top: 10px;"></div>
     </div>
 
-    <!-- Secret Santa 區域 -->
     <div id="buttonsContainer" class="name-grid" style="display: none;"></div>
     <div id="recipientArea" class="recipient" style="display: none;"></div>
+    <button id="logoutButton" style="display: none;" class="login-btn">登出</button>
 
     <script>
-        const FIXED_SEED = 2024; // 固定 seed
-        let participants = [];
-        let recipientMap = {};
-        let receptOverrides = {}; // 儲存 recept.csv 的指定映射
-        let user = null;
+        // Simplified seeded random number generator
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
 
-        // 將名字轉為 UTF-8 的 16 進制密碼
-        function nameToPassword(name) {
-            return Array.from(new TextEncoder().encode(name))
-                .map(byte => byte.toString(16).padStart(2, '0'))
-                .join('');
+            random() {
+                const x = Math.sin(this.seed++) * 10000;
+                return x - Math.floor(x);
+            }
+
+            shuffle(array) {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(this.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            }
         }
 
-        // 登入檢查
+        const FIXED_SEED = 2024;
+        let participants = [];
+        let recipientMap = {};
+        let receptOverrides = {};
+        let user = null;
+
+        // More secure password generation
+        function generatePassword(name) {
+            return btoa(name + "secret_salt_2024").slice(0, 10);
+        }
+
         function login(username, password) {
             const index = participants.indexOf(username);
-            if (index === -1) {
-                return false; // 帳號不存在
-            }
-            const expectedPassword = nameToPassword(username); // 基於名字生成密碼
+            if (index === -1) return false;
+            
+            const expectedPassword = generatePassword(username);
             return password === expectedPassword;
         }
 
-        // 生成 Secret Santa 對象
         function generateRecipientMap() {
             const random = new SeededRandom(FIXED_SEED);
             const shuffled = random.shuffle(participants);
 
-            // 建立收禮人映射
             recipientMap = {};
             for (let i = 0; i < participants.length; i++) {
                 const name = participants[i];
-
-                // 優先使用 receptOverrides 中的對象
-                if (receptOverrides[name]) {
-                    recipientMap[name] = receptOverrides[name];
-                } else {
-                    recipientMap[name] = shuffled[(i + 1) % shuffled.length];
-                }
+                recipientMap[name] = receptOverrides[name] 
+                    || shuffled[(i + 1) % shuffled.length];
             }
         }
 
-        // 顯示要送禮對象
         function showRecipient() {
             const recipientArea = document.getElementById('recipientArea');
             const recipient = recipientMap[user];
             recipientArea.style.display = 'block';
             recipientArea.textContent = `${user} 要送禮給 ${recipient}`;
+            document.getElementById('logoutButton').style.display = 'block';
         }
 
-        // 登入事件
         document.getElementById('loginButton').addEventListener('click', () => {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
             const errorDiv = document.getElementById('loginError');
 
+            if (!username || !password) {
+                errorDiv.textContent = '請輸入帳號和密碼！';
+                return;
+            }
+
             if (login(username, password)) {
                 user = username;
                 document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('buttonsContainer').style.display = 'none';
                 showRecipient();
             } else {
                 errorDiv.textContent = '帳號或密碼錯誤！';
             }
         });
 
-        // 載入 name.csv
-        function loadParticipants() {
-            return fetch('./data/name.csv')
-                .then(response => response.text())
-                .then(text => text.split('\n')
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            user = null;
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('recipientArea').style.display = 'none';
+            document.getElementById('logoutButton').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
+
+        async function loadParticipants() {
+            try {
+                const response = await fetch('./data/name.csv');
+                const text = await response.text();
+                return text.split('\n')
                     .map(name => name.trim())
-                    .filter(name => name.length > 0)
-                );
+                    .filter(name => name.length > 0);
+            } catch (error) {
+                console.error('載入參與者名單時發生錯誤', error);
+                alert('無法載入參與者名單，請稍後再試');
+                return [];
+            }
         }
 
-        // 載入 recept.csv
-        function loadReceptOverrides() {
-            return fetch('./data/recept.csv')
-                .then(response => response.text())
-                .then(text => {
-                    const overrides = {};
-                    text.split('\n')
-                        .map(line => line.split(',').map(item => item.trim()))
-                        .forEach(([name, recept]) => {
-                            if (name && recept) {
-                                overrides[name] = recept;
-                            }
-                        });
-                    return overrides;
-                });
+        async function loadReceptOverrides() {
+            try {
+                const response = await fetch('./data/recept.csv');
+                const text = await response.text();
+                const overrides = {};
+                text.split('\n')
+                    .map(line => line.split(',').map(item => item.trim()))
+                    .forEach(([name, recept]) => {
+                        if (name && recept) {
+                            overrides[name] = recept;
+                        }
+                    });
+                return overrides;
+            } catch (error) {
+                console.error('載入收禮者指定時發生錯誤', error);
+                return {};
+            }
         }
 
-        // 初始化程式
-        Promise.all([loadParticipants(), loadReceptOverrides()])
-            .then(([loadedParticipants, loadedOverrides]) => {
-                participants = loadedParticipants;
-                receptOverrides = loadedOverrides;
+        async function initializeApp() {
+            try {
+                participants = await loadParticipants();
+                receptOverrides = await loadReceptOverrides();
 
                 if (participants.length > 0) {
                     generateRecipientMap();
                 }
-            })
-            .catch(() => {
-                alert("載入名單或指定收禮者時發生錯誤！");
-            });
+            } catch (error) {
+                console.error('初始化應用程式時發生錯誤', error);
+                alert('應用程式初始化失敗，請稍後再試');
+            }
+        }
+
+        initializeApp();
     </script>
 </body>
 </html>
