@@ -86,16 +86,18 @@
         let receptOverrides = {};
         let user = null;
 
-        // More secure password generation
-        function generatePassword(name) {
-            return btoa(name + "secret_salt_2024").slice(0, 10);
+        // 將名字轉為 UTF-8 的 16 進制密碼
+        function nameToPassword(name) {
+            return Array.from(new TextEncoder().encode(name))
+                .map(byte => byte.toString(16).padStart(2, '0'))
+                .join('');
         }
 
         function login(username, password) {
             const index = participants.indexOf(username);
             if (index === -1) return false;
             
-            const expectedPassword = generatePassword(username);
+            const expectedPassword = nameToPassword(username);
             return password === expectedPassword;
         }
 
