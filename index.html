@@ -60,32 +60,10 @@
     <div id="recipientArea" class="recipient" style="display: none;"></div>
 
     <script>
-        class SeededRandom {
-            constructor(seed) {
-                this.seed = seed;
-            }
-
-            next() {
-                const a = 1664525;
-                const c = 1013904223;
-                const m = Math.pow(2, 32);
-                this.seed = (a * this.seed + c) % m;
-                return this.seed / m;
-            }
-
-            shuffle(array) {
-                const result = [...array];
-                for (let i = result.length - 1; i > 0; i--) {
-                    const j = Math.floor(this.next() * (i + 1));
-                    [result[i], result[j]] = [result[j], result[i]];
-                }
-                return result;
-            }
-        }
-
-        const FIXED_SEED = 2025; // 固定 seed
+        const FIXED_SEED = 2024; // 固定 seed
         let participants = [];
         let recipientMap = {};
+        let receptOverrides = {}; // 儲存 recept.csv 的指定映射
         let user = null;
 
         // 將名字轉為 UTF-8 的 16 進制密碼
@@ -112,8 +90,15 @@
 
             // 建立收禮人映射
             recipientMap = {};
-            for (let i = 0; i < shuffled.length; i++) {
-                recipientMap[shuffled[i]] = shuffled[(i + 1) % shuffled.length];
+            for (let i = 0; i < participants.length; i++) {
+                const name = participants[i];
+
+                // 優先使用 receptOverrides 中的對象
+                if (receptOverrides[name]) {
+                    recipientMap[name] = receptOverrides[name];
+                } else {
+                    recipientMap[name] = shuffled[(i + 1) % shuffled.length];
+                }
             }
         }
 
@@ -141,25 +126,45 @@
             }
         });
 
-        // 載入 CSV 名單
-        fetch('./data/name.csv')
-            .then(response => response.text())
-            .then(text => {
-                participants = text.split('\n')
+        // 載入 name.csv
+        function loadParticipants() {
+            return fetch('./data/name.csv')
+                .then(response => response.text())
+                .then(text => text.split('\n')
                     .map(name => name.trim())
-                    .filter(name => name.length > 0);
+                    .filter(name => name.length > 0)
+                );
+        }
+
+        // 載入 recept.csv
+        function loadReceptOverrides() {
+            return fetch('./data/recept.csv')
+                .then(response => response.text())
+                .then(text => {
+                    const overrides = {};
+                    text.split('\n')
+                        .map(line => line.split(',').map(item => item.trim()))
+                        .forEach(([name, recept]) => {
+                            if (name && recept) {
+                                overrides[name] = recept;
+                            }
+                        });
+                    return overrides;
+                });
+        }
+
+        // 初始化程式
+        Promise.all([loadParticipants(), loadReceptOverrides()])
+            .then(([loadedParticipants, loadedOverrides]) => {
+                participants = loadedParticipants;
+                receptOverrides = loadedOverrides;
 
                 if (participants.length > 0) {
                     generateRecipientMap();
                 }
             })
             .catch(() => {
-                participants = [
-                    "小明", "小華", "阿強", 
-                    "小芳", "小美", "阿龍", 
-                    "小英", "小玲", "阿偉"
-                ];
-                generateRecipientMap();
+                alert("載入名單或指定收禮者時發生錯誤！");
             });
     </script>
 </body>
