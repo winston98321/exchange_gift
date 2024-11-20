@@ -59,31 +59,10 @@
     <button id="logoutButton" style="display: none;" class="login-btn">登出</button>
 
     <script>
-        // Simplified seeded random number generator
-        class SeededRandom {
-            constructor(seed) {
-                this.seed = seed;
-            }
-
-            random() {
-                const x = Math.sin(this.seed++) * 10000;
-                return x - Math.floor(x);
-            }
-
-            shuffle(array) {
-                const shuffled = [...array];
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(this.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                }
-                return shuffled;
-            }
-        }
-
         const FIXED_SEED = 2024;
         let participants = [];
+        let receptionists = [];
         let recipientMap = {};
-        let receptOverrides = {};
         let user = null;
 
         // 將名字轉為 UTF-8 的 16 進制密碼
@@ -102,14 +81,10 @@
         }
 
         function generateRecipientMap() {
-            const random = new SeededRandom(FIXED_SEED);
-            const shuffled = random.shuffle(participants);
-
+            // 第一個名字送禮給第一個收禮者
             recipientMap = {};
             for (let i = 0; i < participants.length; i++) {
-                const name = participants[i];
-                recipientMap[name] = receptOverrides[name] 
-                    || shuffled[(i + 1) % shuffled.length];
+                recipientMap[participants[i]] = receptionists[i];
             }
         }
 
@@ -163,31 +138,26 @@
             }
         }
 
-        async function loadReceptOverrides() {
+        async function loadReceptionists() {
             try {
                 const response = await fetch('./data/recept.csv');
                 const text = await response.text();
-                const overrides = {};
-                text.split('\n')
-                    .map(line => line.split(',').map(item => item.trim()))
-                    .forEach(([name, recept]) => {
-                        if (name && recept) {
-                            overrides[name] = recept;
-                        }
-                    });
-                return overrides;
+                return text.split('\n')
+                    .map(name => name.trim())
+                    .filter(name => name.length > 0);
             } catch (error) {
-                console.error('載入收禮者指定時發生錯誤', error);
-                return {};
+                console.error('載入收禮者名單時發生錯誤', error);
+                alert('無法載入收禮者名單，請稍後再試');
+                return [];
             }
         }
 
         async function initializeApp() {
             try {
                 participants = await loadParticipants();
-                receptOverrides = await loadReceptOverrides();
+                receptionists = await loadReceptionists();
 
-                if (participants.length > 0) {
+                if (participants.length > 0 && receptionists.length > 0) {
                     generateRecipientMap();
                 }
             } catch (error) {
